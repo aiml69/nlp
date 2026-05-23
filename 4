@@ -1,0 +1,51 @@
+import nltk, torch, torch.nn as nn, torch. optim as optim
+from nltk.corpus import brown
+
+nltk.download('brown')
+nltk.download('universal_tagset')
+
+T = {'NOUN', 'VERB', 'ADJ'}
+
+data = [
+    [(w.lower(), t) for w, t in sent if t in T]
+    for sent in brown.tagged_sents(tagset='universal')[:300]
+]
+
+words = sorted({w for s in data for w, _ in s})
+tags = sorted(T)
+
+w2i = {w: i + 1 for i, w in enumerate(words)}
+t2i = {t: i for i, t in enumerate(tags)}
+
+X, Y = [], []
+for s in data:
+    for i in range(len(s) - 1):
+        X.append(w2i[s[i][0]])
+        Y.append(t2i[s[i + 1][1]])
+
+X = torch.tensor(X)
+Y = torch.tensor(Y)
+
+class Tagger(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.e = nn.Embedding(len(w2i) + 1, 8)
+        self.l = nn.Linear(8, len(tags))
+
+    def forward(self, x):
+        return self.l(self.e(x))
+
+model = Tagger()
+opt = optim.Adam(model.parameters(), 0.01)
+loss_fn = nn.CrossEntropyLoss()
+
+for _ in range(50):
+    opt.zero_grad()
+    loss = loss_fn(model(X), Y)
+    loss.backward()
+    opt.step()
+
+word = 'dog'
+if word in w2i:
+    pred = tags[model(torch.tensor([w2i[word]])).argmax().item()]
+    print(f'{word} -> {pred}')
