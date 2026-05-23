@@ -1,0 +1,71 @@
+import torch
+import torch.nn as nn
+from torchcrf import CRF
+from collections import defaultdict
+
+data = [
+    (["Barack", "Obama", "visited", "India"], ["B-PER", "I-PER", "O", "B-LOC"]),
+    (["Google", "is", "in", "California"], ["B-ORG", "O", "O", "B-LOC"]),
+    (["Microsoft", "hired", "Sundar", "Pichai"], ["B-ORG", "O", "B-PER", "I-PER"]),
+]
+
+w2i = defaultdict(lambda: len(w2i))
+t2i = defaultdict(lambda: len(t2i))
+w2i["PAD"]
+t2i["O"]
+
+for s, t in data:
+    for w in s:
+        w2i[w.lower()]
+    for x in t:
+        t2i[x]
+
+i2t = {i: t for t, i in t2i.items()}
+
+X = torch.tensor([[w2i[w.lower()] for w in s] for s, _ in data])
+Y = torch.tensor([[t2i[t] for t in tags] for _, tags in data])
+
+class NER(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.emb = nn.Embedding(len(w2i), 64, padding_idx=0)
+        self.lstm = nn.LSTM(
+            64, 64, num_layers=2, bidirectional=True,
+            batch_first=True, dropout=0.3
+        )
+        self.fc = nn.Linear(128, len(t2i))
+        self.crf = CRF(len(t2i), batch_first=True)
+
+    def emit(self, x):
+        return self.fc(self.lstm(self.emb(x))[0])
+
+    def loss(self, x, y):
+        return -self.crf(self.emit(x), y)
+
+    def pred(self, x):
+        return self.crf.decode(self.emit(x))
+
+model = NER()
+opt = torch.optim.Adam(model.parameters(), lr=0.01)
+
+for ep in range(10):
+    loss = sum(
+        model.loss(x.unsqueeze(0), y.unsqueeze(0)).item()
+        for x, y in zip(X, Y)
+    )
+    opt.zero_grad()
+    model.loss(x.unsqueeze(0), y.unsqueeze(0)).backward()
+    opt.step()
+    if (ep + 1) % 5 == 0:
+        print(f"Epoch {ep+1} Loss {loss:.3f}")
+
+def predict(s):
+    t = s.split()
+    ids = torch.tensor([w2i.get(w.lower(), 0) for w in t])
+    print("Token       Tag")
+    print("-" * 20)
+    for w, i in zip(t, model.pred(ids.unsqueeze(0))[0]):
+        print(f"{w:12} {i2t[i]}")
+
+predict("Barack Obama visited India")
+predict("Google is in California")
