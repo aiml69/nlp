@@ -1,0 +1,22 @@
+import re
+
+faq = [
+    (["hi|hello"], ["hi"], "Hello! How can I help?"),
+    (["fee|cost|price"], ["fees"], "Course fee is 50,000 INR."),
+    (["duration|long"], ["time"], "Duration is 6 months."),
+    (["bye"], ["bye"], "Goodbye!")
+]
+
+def chatbot(msg):
+    msg = msg.lower()
+    for patterns, _, reply in faq:
+        for p in patterns:
+            if re.search(p, msg):
+                return reply
+    return "Sorry, I don't understand."
+
+while True:
+    user = input("You: ")
+    if user.lower() == 'exit':
+        break
+    print("Bot:", chatbot(user))
