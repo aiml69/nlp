@@ -1,0 +1,30 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+data = [
+    ("hi", "hello"),
+    ("how are you", "i am fine"),
+    ("bye", "goodbye"),
+    ("name", "i am bot")
+]
+
+chars = {c for i, o in data for c in i + o} | {"<SOS>", "<EOS>"}
+w2i = {c: i for i, c in enumerate(chars)}
+i2w = {i: c for c, i in w2i.items()}
+
+class Seq2Seq(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.emb = nn.Embedding(len(w2i), 16)
+        self.rnn = nn.GRU(16, 32, batch_first=True)
+        self.fc = nn.Linear(32, len(w2i))
+
+    def forward(self, x):
+        x = self.emb(x)
+        out, _ = self.rnn(x)
+        return self.fc(out)
+
+model = Seq2Seq()
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+criterion = nn.CrossEntropyLoss()
