@@ -1,0 +1,70 @@
+import numpy as np
+# Load NLP model
+nlp = spacy.load("en_core_web_sm")
+
+# Preprocessing
+
+def preprocess(text):
+    doc = nlp(text.lower())
+    tokens = [
+        token.lemma_
+        for token in doc
+        if token.is_alpha and not token.is_stop
+    ]
+    return " ".join(tokens)
+
+
+_df['clean_text'] = _df['review'].apply(preprocess)
+
+# TF-IDF Features
+vectorizer = TfidfVectorizer(max_features=5000)
+X_tfidf = vectorizer.fit_transform(_df['clean_text'])
+
+# Sentiment Features
+_df['polarity'] = _df['review'].apply(
+    lambda x: TextBlob(x).sentiment.polarity
+)
+X_sentiment = _df['polarity'].values.reshape(-1, 1)
+
+# Word2Vec
+sentences = [text.split() for text in _df['clean_text']]
+
+w2v_model = Word2Vec(
+    sentences=sentences,
+    vector_size=100,
+    window=5,
+    min_count=2,
+    workers=4
+)
+
+
+def document_vector(doc):
+    words = doc.split()
+    vectors = [w2v_model.wv[word] for word in words if word in w2v_model.wv]
+    return np.mean(vectors, axis=0) if vectors else np.zeros(100)
+
+
+X_w2v = np.array([document_vector(doc) for doc in _df['clean_text']])
+
+# Combine Features
+X_combined = hstack([X_tfidf, X_sentiment])
+
+# Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X_combined,
+    _df['label'],
+    test_size=0.2,
+    random_state=42
+)
+
+# Model Training
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Prediction
+predictions = model.predict(X_test)
+
+# Evaluation
+accuracy = accuracy_score(y_test, predictions)
+print("Accuracy:", accuracy)
+print(classification_report(y_test, predictions))
