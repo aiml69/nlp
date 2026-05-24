@@ -11,11 +11,9 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-
 _df = pd.read_csv("7817_1.csv")
 subset = _df["reviews.text"].head()
 df2 = pd.DataFrame(subset)
-
 
 def clean_text(text):
     text = text.lower()
@@ -23,41 +21,28 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-
 df2["clean_text"] = df2["reviews.text"].apply(clean_text)
-
-
 
 def tokenize_text(text):
     return word_tokenize(text)
 
-
 df2["tokens"] = df2["clean_text"].apply(tokenize_text)
-
 stop_words = set(stopwords.words('english'))
-
 
 def remove_stopwords(tokens):
     return [word for word in tokens if word not in stop_words]
-
-
+    
 df2["filtered_tokens"] = df2["tokens"].apply(remove_stopwords)
 
-
 ps = PorterStemmer()
-
 
 def apply_stemming(tokens):
     return [ps.stem(word) for word in tokens]
 
-
 df2["stemmed_tokens"] = df2["filtered_tokens"].apply(apply_stemming)
-
 lemmatizer = WordNetLemmatizer()
-
 
 def apply_lemmatization(tokens):
     return [lemmatizer.lemmatize(word) for word in tokens]
-
 
 df2["lemmatized_tokens"] = df2["filtered_tokens"].apply(apply_lemmatization)
