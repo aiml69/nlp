@@ -1,0 +1,11 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+     df2["processed_text"] = df2["lemmatized_tokens"].apply(lambda x: " ".join(x))
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(df2["processed_text"])
+tfidf_df = pd.DataFrame(
+    tfidf_matrix.toarray(),
+    columns=vectorizer.get_feature_names_out()
+)
+print("\nTF-IDF Matrix:\n")
+tfidf_df
+
